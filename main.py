@@ -878,3 +878,91 @@ class Se33dEngine:
     def __init__(self, genesis_block: int = 0) -> None:
         self.genesis_block = genesis_block
         self.cannon = Se33dCannonCore(genesis_block)
+        self.superapp = Se33dSuperApp(self.cannon, genesis_block)
+        self.seed_vault = Se33dSeedVault(self.cannon)
+        self.relay = Se33dCrossFeedRelay(self.superapp)
+        self._relay_deadline = time.time() + RELAY_TIMEOUT
+
+    def validate_config(self) -> bool:
+        if len(set(self.ANCHORS)) != len(self.ANCHORS):
+            return False
+        return all(_is_eth_like(a) for a in self.ANCHORS)
+
+    def domain_hash(self, *fields: Any) -> bytes:
+        blob = json.dumps(fields, sort_keys=True, default=str).encode()
+        return _digest(DOMAIN_SEPARATOR.encode(), CANNON_SALT_HEX.encode(), blob)
+
+    def meme_digest(self, meme_id: str) -> bytes:
+        m = self.cannon._memes.get(meme_id)
+        if not m:
+            raise SE33D_MemeMissing()
+        return _digest(meme_id.encode(), m.body.encode(), m.image_hash.encode())
+
+    def full_status(self) -> Dict[str, Any]:
+        return se33d_v2_status(self)
+
+    def legacy_status(self) -> Dict[str, Any]:
+        return {
+            "version": SE33D_VERSION,
+            "genesis": self.genesis_block,
+            "memes": self.cannon.meme_count(),
+            "shots": self.cannon.shot_count(),
+            "superapp": self.superapp.module_summary(),
+            "lane_frozen": self.cannon.lane_frozen(),
+            "config_ok": self.validate_config(),
+        }
+
+
+
+
+def se33d_format_wallet(*args: Any, **kwargs: Any) -> Any:
+    w = args[0] if args else ""
+    return f"{w[:8]}...{w[-6:]}" if len(w) > 14 else w
+
+
+def se33d_hype_bar(*args: Any, **kwargs: Any) -> Any:
+    h = int(args[0]) if args else 0
+    cap = VIRALITY_CAP
+    pct = min(100, int(100 * h / cap)) if cap else 0
+    return "#" * (pct // 5)
+
+
+def se33d_bps_to_pct(*args: Any, **kwargs: Any) -> Any:
+    b = int(args[0]) if args else 0
+    return round(100.0 * b / SE33D_BPS, 2)
+
+
+def se33d_epoch_id(*args: Any, **kwargs: Any) -> Any:
+    b = int(args[0]) if args else 0
+    return b // EPOCH_SPAN if EPOCH_SPAN else 0
+
+
+def se33d_phase_label(*args: Any, **kwargs: Any) -> Any:
+    p = int(args[0]) if args else 0
+    try:
+        return SE33D_BlastPhase(p).name
+    except ValueError:
+        return "UNKNOWN"
+
+
+def se33d_tier_label(*args: Any, **kwargs: Any) -> Any:
+    t = int(args[0]) if args else 0
+    try:
+        return SE33D_MemeTier(t).name
+    except ValueError:
+        return "DRAFT"
+
+
+def se33d_lane_label(*args: Any, **kwargs: Any) -> Any:
+    s = int(args[0]) if args else 0
+    try:
+        return SE33D_LaneState(s).name
+    except ValueError:
+        return "OPEN"
+
+
+def se33d_module_kind_name(*args: Any, **kwargs: Any) -> Any:
+    k = int(args[0]) if args else 0
+    for m in SE33D_ModuleKind:
+        if m.value == k:
+            return m.name
