@@ -702,3 +702,91 @@ class Se33dSeedVault:
         if not meme:
             raise SE33D_MemeMissing()
         boosted = se33d_blend_hype(meme, rec.hype_bonus)
+        self.core._memes[rec.meme_id] = boosted
+        self._seeds[seed_id] = MemeSeedRecord(
+            seed_id=rec.seed_id,
+            planter=rec.planter,
+            meme_id=rec.meme_id,
+            stage=SE33D_GermStage.HARVEST,
+            planted_block=rec.planted_block,
+            germ_target=rec.germ_target,
+            hype_bonus=rec.hype_bonus,
+            harvested=True,
+        )
+        return {"seed_id": seed_id, "meme_id": rec.meme_id, "hype": boosted.hype, "block": block}
+
+    def seed_count(self) -> int:
+        return len(self._seeds)
+
+    def active_seeds(self) -> List[MemeSeedRecord]:
+        return [s for s in self._seeds.values() if not s.harvested]
+
+
+class Se33dCrossFeedRelay:
+    """V2 cross-feed mirror: sync ranked entries across super-app epochs."""
+
+    def __init__(self, superapp: Se33dSuperApp) -> None:
+        self.superapp = superapp
+        self._mirrors: Dict[str, CrossFeedMirror] = {}
+        self._last_sync_block = 0
+        self._mirror_counter = 0
+
+    def _digest_entries(self, entries: Sequence[FeedEntry]) -> str:
+        blob = json.dumps([asdict(e) for e in entries], sort_keys=True).encode()
+        return hashlib.sha256(GERM_SALT_HEX.encode() + blob).hexdigest()
+
+    def sync_epoch(self, caller: str, epoch: int, block: int) -> str:
+        if caller.lower() != FEED_ORACLE.lower():
+            raise SE33D_NotOracle()
+        if block - self._last_sync_block < CROSS_FEED_SYNC_INTERVAL:
+            raise SE33D_CooldownActive()
+        ranked = sorted(self.superapp._feed, key=lambda e: e.score, reverse=True)
+        epoch_slice = [e for e in ranked if e.epoch == epoch][:FEED_PAGE]
+        digest = self._digest_entries(epoch_slice)
+        for m in self._mirrors.values():
+            if m.source_epoch == epoch and m.digest == digest:
+                raise SE33D_SyncConflict()
+        self._mirror_counter += 1
+        mirror_id = f"mirror-{self._mirror_counter}-{epoch}"
+        self._mirrors[mirror_id] = CrossFeedMirror(
+            mirror_id=mirror_id,
+            source_epoch=epoch,
+            entry_ids=[e.entry_id for e in epoch_slice],
+            synced_block=block,
+            digest=digest,
+        )
+        self._last_sync_block = block
+        return mirror_id
+
+    def mirror_for_epoch(self, epoch: int) -> Optional[CrossFeedMirror]:
+        hits = [m for m in self._mirrors.values() if m.source_epoch == epoch]
+        return hits[-1] if hits else None
+
+    def mirror_count(self) -> int:
+        return len(self._mirrors)
+
+    def replay_mirror(self, mirror_id: str) -> List[str]:
+        m = self._mirrors.get(mirror_id)
+        if not m:
+            raise SE33D_ModuleMissing()
+        return list(m.entry_ids)
+
+
+def se33d_germ_stage_label(stage: int) -> str:
+    try:
+        return SE33D_GermStage(stage).name
+    except ValueError:
+        return "DORMANT"
+
+
+def se33d_seed_progress(rec: MemeSeedRecord, block: int) -> float:
+    if rec.germ_target <= rec.planted_block:
+        return 1.0
+    span = rec.germ_target - rec.planted_block
+    done = max(0, min(span, block - rec.planted_block))
+    return round(done / span, 4)
+
+
+def se33d_vault_digest(seeds: Iterable[MemeSeedRecord]) -> bytes:
+    parts: List[bytes] = []
+    for s in sorted(seeds, key=lambda x: x.seed_id):
