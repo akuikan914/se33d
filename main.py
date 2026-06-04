@@ -526,3 +526,91 @@ class Se33dSuperApp:
         s = self._sessions.get(session_id)
         if not s:
             raise SE33D_ModuleMissing()
+        if s.tokens_used + n > s.quota:
+            raise SE33D_QuotaBurst()
+        self._sessions[session_id] = CopilotSession(
+            session_id=s.session_id,
+            user=s.user,
+            tokens_used=s.tokens_used + n,
+            quota=s.quota,
+            started_at=s.started_at,
+        )
+        return s.quota - s.tokens_used - n
+
+    def buy_launch_ticket(self, meme_id: str, pad_slot: int) -> str:
+        if meme_id not in self.core._memes:
+            raise SE33D_MemeMissing()
+        tid = hashlib.sha256(f"{meme_id}{pad_slot}{time.time()}".encode()).hexdigest()[:28]
+        self._tickets[tid] = LaunchTicket(
+            ticket_id=tid,
+            pad_slot=pad_slot,
+            meme_id=meme_id,
+            fee_paid=LAUNCH_FEE_WEI,
+            settled=False,
+        )
+        return tid
+
+    def settle_ticket(self, ticket_id: str) -> None:
+        t = self._tickets.get(ticket_id)
+        if not t:
+            raise SE33D_ModuleMissing()
+        self._tickets[ticket_id] = LaunchTicket(
+            ticket_id=t.ticket_id,
+            pad_slot=t.pad_slot,
+            meme_id=t.meme_id,
+            fee_paid=t.fee_paid,
+            settled=True,
+        )
+
+    def module_summary(self) -> Dict[str, Any]:
+        return {
+            "modules": len(self._modules),
+            "wallets": len(self._wallets),
+            "feed_len": len(self._feed),
+            "sessions": len(self._sessions),
+            "tickets": len(self._tickets),
+        }
+
+
+
+
+class SE33D_GermStage(IntEnum):
+    DORMANT = 0
+    SOAKING = 1
+    SPROUT = 2
+    BLOOM = 3
+    HARVEST = 4
+
+
+class SE33D_SeedMissing(SE33D_Error):
+    pass
+
+
+class SE33D_GermNotReady(SE33D_Error):
+    pass
+
+
+class SE33D_SyncConflict(SE33D_Error):
+    pass
+
+
+class SE33D_VaultFull(SE33D_Error):
+    pass
+
+
+@dataclass
+class MemeSeedRecord:
+    seed_id: str
+    planter: str
+    meme_id: str
+    stage: SE33D_GermStage
+    planted_block: int
+    germ_target: int
+    hype_bonus: int
+    harvested: bool = False
+
+
+@dataclass
+class CrossFeedMirror:
+    mirror_id: str
+    source_epoch: int
