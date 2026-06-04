@@ -1230,3 +1230,91 @@ def se33d_scenario_register_and_blast_16(engine: Se33dEngine, author: str, block
 def se33d_scenario_super_module_17(engine: Se33dEngine, owner: str, block: int) -> str:
     mod = engine.superapp.open_module(owner, SE33D_ModuleKind.CANNON, MIN_STAKE_WEI + 1289, block)
     engine.superapp.bind_wallet(owner, mod)
+    return mod
+
+def se33d_scenario_copilot_18(engine: Se33dEngine, user: str) -> Dict[str, Any]:
+    sid = engine.superapp.start_copilot(user)
+    left = engine.superapp.consume_copilot_tokens(sid, 128 + 118)
+    return {"session": sid, "remaining": left}
+
+def se33d_scenario_launch_19(engine: Se33dEngine, author: str, block: int) -> str:
+    mid = engine.cannon.register_meme(author, "launch-19", "0xL19", block)
+    tid = engine.superapp.buy_launch_ticket(mid, 5 % MAX_SUPER_MODULES)
+    engine.superapp.settle_ticket(tid)
+    return tid
+
+def se33d_scenario_register_and_blast_20(engine: Se33dEngine, author: str, block: int) -> Dict[str, Any]:
+    mid = engine.cannon.register_meme(author, "meme-20-payload", "0ximg20", block)
+    shot = engine.cannon.arm_cannon(author, [mid], block + 1)
+    engine.cannon.fire_cannon(CANNON_WARDEN, shot, block + 2)
+    engine.cannon.land_shot(FEED_ORACLE, shot, block + 3)
+    engine.superapp.push_feed(mid, se33d_feed_score(engine.cannon._memes[mid].hype, 1), block // EPOCH_SPAN)
+    return {"meme_id": mid, "shot_id": shot}
+
+def se33d_scenario_super_module_21(engine: Se33dEngine, owner: str, block: int) -> str:
+    mod = engine.superapp.open_module(owner, SE33D_ModuleKind.CANNON, MIN_STAKE_WEI + 1357, block)
+    engine.superapp.bind_wallet(owner, mod)
+    return mod
+
+def se33d_scenario_copilot_22(engine: Se33dEngine, user: str) -> Dict[str, Any]:
+    sid = engine.superapp.start_copilot(user)
+    left = engine.superapp.consume_copilot_tokens(sid, 128 + 130)
+    return {"session": sid, "remaining": left}
+
+def se33d_scenario_launch_23(engine: Se33dEngine, author: str, block: int) -> str:
+    mid = engine.cannon.register_meme(author, "launch-23", "0xL23", block)
+    tid = engine.superapp.buy_launch_ticket(mid, 2 % MAX_SUPER_MODULES)
+    engine.superapp.settle_ticket(tid)
+    return tid
+
+def se33d_scenario_register_and_blast_24(engine: Se33dEngine, author: str, block: int) -> Dict[str, Any]:
+    mid = engine.cannon.register_meme(author, "meme-24-payload", "0ximg24", block)
+    shot = engine.cannon.arm_cannon(author, [mid], block + 1)
+    engine.cannon.fire_cannon(CANNON_WARDEN, shot, block + 2)
+    engine.cannon.land_shot(FEED_ORACLE, shot, block + 3)
+    engine.superapp.push_feed(mid, se33d_feed_score(engine.cannon._memes[mid].hype, 1), block // EPOCH_SPAN)
+    return {"meme_id": mid, "shot_id": shot}
+
+def se33d_scenario_super_module_25(engine: Se33dEngine, owner: str, block: int) -> str:
+    mod = engine.superapp.open_module(owner, SE33D_ModuleKind.CANNON, MIN_STAKE_WEI + 1425, block)
+    engine.superapp.bind_wallet(owner, mod)
+    return mod
+
+def se33d_scenario_copilot_26(engine: Se33dEngine, user: str) -> Dict[str, Any]:
+    sid = engine.superapp.start_copilot(user)
+    left = engine.superapp.consume_copilot_tokens(sid, 128 + 142)
+    return {"session": sid, "remaining": left}
+
+def se33d_scenario_launch_27(engine: Se33dEngine, author: str, block: int) -> str:
+    mid = engine.cannon.register_meme(author, "launch-27", "0xL27", block)
+    tid = engine.superapp.buy_launch_ticket(mid, 6 % MAX_SUPER_MODULES)
+    engine.superapp.settle_ticket(tid)
+    return tid
+
+def se33d_scenario_register_and_blast_28(engine: Se33dEngine, author: str, block: int) -> Dict[str, Any]:
+    mid = engine.cannon.register_meme(author, "meme-28-payload", "0ximg28", block)
+    shot = engine.cannon.arm_cannon(author, [mid], block + 1)
+    engine.cannon.fire_cannon(CANNON_WARDEN, shot, block + 2)
+    engine.cannon.land_shot(FEED_ORACLE, shot, block + 3)
+    engine.superapp.push_feed(mid, se33d_feed_score(engine.cannon._memes[mid].hype, 1), block // EPOCH_SPAN)
+    return {"meme_id": mid, "shot_id": shot}
+
+def se33d_scenario_super_module_29(engine: Se33dEngine, owner: str, block: int) -> str:
+    mod = engine.superapp.open_module(owner, SE33D_ModuleKind.CANNON, MIN_STAKE_WEI + 1493, block)
+    engine.superapp.bind_wallet(owner, mod)
+    return mod
+
+def se33d_scenario_copilot_30(engine: Se33dEngine, user: str) -> Dict[str, Any]:
+    sid = engine.superapp.start_copilot(user)
+    left = engine.superapp.consume_copilot_tokens(sid, 128 + 154)
+    return {"session": sid, "remaining": left}
+
+def se33d_scenario_launch_31(engine: Se33dEngine, author: str, block: int) -> str:
+    mid = engine.cannon.register_meme(author, "launch-31", "0xL31", block)
+    tid = engine.superapp.buy_launch_ticket(mid, 3 % MAX_SUPER_MODULES)
+    engine.superapp.settle_ticket(tid)
+    return tid
+
+def se33d_scenario_register_and_blast_32(engine: Se33dEngine, author: str, block: int) -> Dict[str, Any]:
+    mid = engine.cannon.register_meme(author, "meme-32-payload", "0ximg32", block)
+    shot = engine.cannon.arm_cannon(author, [mid], block + 1)
