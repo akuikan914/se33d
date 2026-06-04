@@ -350,3 +350,91 @@ class Se33dCannonCore:
         self._memes[meme_id] = MemePayload(
             meme_id=m.meme_id,
             author=m.author,
+            body=m.body,
+            image_hash=m.image_hash,
+            tier=new_tier,
+            hype=min(VIRALITY_CAP, m.hype + 400),
+            created_block=m.created_block,
+            ttl_blocks=m.ttl_blocks,
+            sealed=m.sealed,
+        )
+        self._emit("MemePromoted", caller, {"meme_id": meme_id, "tier": new_tier.value}, block)
+
+    def arm_cannon(self, operator: str, meme_ids: Sequence[str], block: int) -> str:
+        if self._lane_frozen:
+            raise SE33D_LaneFrozen()
+        if block - self._last_cooldown_block < COOLDOWN_TICKS:
+            raise SE33D_CooldownActive()
+        if len(meme_ids) > MAX_CANNON_BATCH:
+            raise SE33D_BatchOverflow()
+        for mid in meme_ids:
+            if mid not in self._memes:
+                raise SE33D_MemeMissing()
+        self._shot_counter += 1
+        shot_id = f"shot-{self._shot_counter}-{block}"
+        self._shots[shot_id] = CannonShot(
+            shot_id=shot_id,
+            operator=operator,
+            meme_ids=list(meme_ids),
+            phase=SE33D_BlastPhase.ARMING,
+            bore_bps=CANNON_BORE_BPS,
+            fired_block=0,
+        )
+        self._emit("CannonArmed", operator, {"shot_id": shot_id, "count": len(meme_ids)}, block)
+        return shot_id
+
+    def fire_cannon(self, operator: str, shot_id: str, block: int) -> None:
+        shot = self._shots.get(shot_id)
+        if not shot or shot.phase != SE33D_BlastPhase.ARMING:
+            raise SE33D_MemeMissing()
+        if shot.operator.lower() != operator.lower():
+            raise SE33D_ZeroPayload()
+        self._shots[shot_id] = CannonShot(
+            shot_id=shot.shot_id,
+            operator=shot.operator,
+            meme_ids=shot.meme_ids,
+            phase=SE33D_BlastPhase.FIRED,
+            bore_bps=shot.bore_bps,
+            fired_block=block,
+        )
+        self._last_cooldown_block = block
+        self._emit("CannonFired", operator, {"shot_id": shot_id}, block)
+
+    def land_shot(self, caller: str, shot_id: str, block: int) -> None:
+        self._require_oracle(caller)
+        shot = self._shots.get(shot_id)
+        if not shot or shot.phase != SE33D_BlastPhase.FIRED:
+            raise SE33D_MemeMissing()
+        self._shots[shot_id] = CannonShot(
+            shot_id=shot.shot_id,
+            operator=shot.operator,
+            meme_ids=shot.meme_ids,
+            phase=SE33D_BlastPhase.LANDED,
+            bore_bps=shot.bore_bps,
+            fired_block=shot.fired_block,
+            landed_block=block,
+        )
+        self._emit("CannonLanded", caller, {"shot_id": shot_id}, block)
+
+    def meme_count(self) -> int:
+        return len(self._memes)
+
+    def shot_count(self) -> int:
+        return len(self._shots)
+
+    def events_snapshot(self) -> List[Dict[str, Any]]:
+        return [asdict(e) for e in self._events[-FEED_PAGE:]]
+
+
+
+
+class Se33dSuperApp:
+    """Super-app router: wallet, feed, cannon, copilot, launcher modules."""
+
+    def __init__(self, core: Se33dCannonCore, genesis_block: int = 0) -> None:
+        self.core = core
+        self.genesis_block = genesis_block
+        self._modules: Dict[str, SuperModule] = {}
+        self._wallets: Dict[str, WalletLane] = {}
+        self._feed: List[FeedEntry] = []
+        self._sessions: Dict[str, CopilotSession] = {}
