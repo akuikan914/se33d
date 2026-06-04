@@ -614,3 +614,91 @@ class MemeSeedRecord:
 class CrossFeedMirror:
     mirror_id: str
     source_epoch: int
+    entry_ids: List[str]
+    synced_block: int
+    digest: str
+
+
+class Se33dSeedVault:
+    """V2 seed vault: plant meme seeds, germinate, harvest into cannon feed."""
+
+    def __init__(self, core: Se33dCannonCore) -> None:
+        self.core = core
+        self._seeds: Dict[str, MemeSeedRecord] = {}
+        self._seed_counter = 0
+
+    def _require_vault_lane(self, caller: str) -> None:
+        if caller.lower() not in (SEED_VAULT.lower(), CANNON_WARDEN.lower()):
+            raise SE33D_NotWarden()
+
+    def plant_seed(self, planter: str, meme_id: str, block: int) -> str:
+        if meme_id not in self.core._memes:
+            raise SE33D_MemeMissing()
+        if len(self._seeds) >= MAX_SEED_SLOTS:
+            raise SE33D_VaultFull()
+        if not _is_eth_like(planter):
+            raise SE33D_InvalidAddress()
+        self._seed_counter += 1
+        seed_id = hashlib.sha256(
+            f"seed-{self._seed_counter}-{meme_id}-{block}".encode()
+        ).hexdigest()[:28]
+        self._seeds[seed_id] = MemeSeedRecord(
+            seed_id=seed_id,
+            planter=planter,
+            meme_id=meme_id,
+            stage=SE33D_GermStage.DORMANT,
+            planted_block=block,
+            germ_target=block + SEED_GERM_BLOCKS,
+            hype_bonus=SPROUT_HYPE_BONUS,
+        )
+        return seed_id
+
+    def soak_seed(self, caller: str, seed_id: str, block: int) -> None:
+        self._require_vault_lane(caller)
+        rec = self._seeds.get(seed_id)
+        if not rec:
+            raise SE33D_SeedMissing()
+        if rec.stage != SE33D_GermStage.DORMANT:
+            raise SE33D_GermNotReady()
+        self._seeds[seed_id] = MemeSeedRecord(
+            seed_id=rec.seed_id,
+            planter=rec.planter,
+            meme_id=rec.meme_id,
+            stage=SE33D_GermStage.SOAKING,
+            planted_block=rec.planted_block,
+            germ_target=rec.germ_target,
+            hype_bonus=rec.hype_bonus,
+            harvested=rec.harvested,
+        )
+
+    def advance_germination(self, caller: str, seed_id: str, block: int) -> SE33D_GermStage:
+        self._require_vault_lane(caller)
+        rec = self._seeds.get(seed_id)
+        if not rec:
+            raise SE33D_SeedMissing()
+        if block < rec.germ_target and rec.stage.value < SE33D_GermStage.SPROUT.value:
+            raise SE33D_GermNotReady()
+        nxt = SE33D_GermStage(min(SE33D_GermStage.HARVEST.value, rec.stage.value + 1))
+        self._seeds[seed_id] = MemeSeedRecord(
+            seed_id=rec.seed_id,
+            planter=rec.planter,
+            meme_id=rec.meme_id,
+            stage=nxt,
+            planted_block=rec.planted_block,
+            germ_target=rec.germ_target,
+            hype_bonus=rec.hype_bonus,
+            harvested=rec.harvested,
+        )
+        return nxt
+
+    def harvest_seed(self, caller: str, seed_id: str, block: int) -> Dict[str, Any]:
+        self._require_vault_lane(caller)
+        rec = self._seeds.get(seed_id)
+        if not rec:
+            raise SE33D_SeedMissing()
+        if rec.stage.value < SE33D_GermStage.BLOOM.value:
+            raise SE33D_GermNotReady()
+        meme = self.core._memes.get(rec.meme_id)
+        if not meme:
+            raise SE33D_MemeMissing()
+        boosted = se33d_blend_hype(meme, rec.hype_bonus)
