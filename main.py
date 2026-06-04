@@ -1054,3 +1054,91 @@ def se33d_launch_pad(*args: Any, **kwargs: Any) -> Any:
     return LAUNCH_PAD
 
 
+def se33d_registry(*args: Any, **kwargs: Any) -> Any:
+    return MEME_REGISTRY
+
+
+def se33d_relay(*args: Any, **kwargs: Any) -> Any:
+    return RELAY_HUB
+
+
+def se33d_treasury(*args: Any, **kwargs: Any) -> Any:
+    return TREASURY_LANE
+
+
+def se33d_domain_sep(*args: Any, **kwargs: Any) -> Any:
+    return DOMAIN_SEPARATOR
+
+
+def se33d_cannon_salt(*args: Any, **kwargs: Any) -> Any:
+    return CANNON_SALT_HEX
+
+
+def se33d_meme_root(*args: Any, **kwargs: Any) -> Any:
+    return MEME_MERKLE_ROOT
+
+
+def se33d_feed_seed(*args: Any, **kwargs: Any) -> Any:
+    return FEED_ATTEST_SEED
+
+
+def se33d_version_tuple(*args: Any, **kwargs: Any) -> Any:
+    return SE33D_VERSION
+
+
+def se33d_scale(*args: Any, **kwargs: Any) -> Any:
+    return SE33D_SCALE
+
+
+def se33d_validate_all_addresses(*args: Any, **kwargs: Any) -> Any:
+    addrs = [ADDRESS_A, ADDRESS_B, ADDRESS_C, CANNON_WARDEN, FEED_ORACLE, VAULT_LANE, AI_COPILOT, LAUNCH_PAD, TREASURY_LANE, MEME_REGISTRY, RELAY_HUB, SEED_VAULT]
+    return len(addrs) == len(set(addrs)) and all(_is_eth_like(a) for a in addrs)
+
+
+def se33d_validate_hex_constants(*args: Any, **kwargs: Any) -> Any:
+    salts = [DOMAIN_SEPARATOR, CANNON_SALT_HEX, MEME_MERKLE_ROOT, FEED_ATTEST_SEED]
+    return len(salts) == len(set(salts))
+
+
+def se33d_constants_dict(*args: Any, **kwargs: Any) -> Any:
+    return {
+        "ADDRESS_A": ADDRESS_A,
+        "ADDRESS_B": ADDRESS_B,
+        "ADDRESS_C": ADDRESS_C,
+        "CANNON_WARDEN": CANNON_WARDEN,
+        "FEED_ORACLE": FEED_ORACLE,
+        "VAULT_LANE": VAULT_LANE,
+        "AI_COPILOT": AI_COPILOT,
+        "LAUNCH_PAD": LAUNCH_PAD,
+        "TREASURY_LANE": TREASURY_LANE,
+        "MEME_REGISTRY": MEME_REGISTRY,
+        "RELAY_HUB": RELAY_HUB,
+        "DOMAIN_SEPARATOR": DOMAIN_SEPARATOR,
+        "CANNON_SALT_HEX": CANNON_SALT_HEX,
+        "MEME_MERKLE_ROOT": MEME_MERKLE_ROOT,
+        "FEED_ATTEST_SEED": FEED_ATTEST_SEED,
+        "SEED_VAULT": SEED_VAULT,
+        "GERM_SALT_HEX": GERM_SALT_HEX,
+    }
+
+
+# ─── Scenario handlers (meme cannon super-app flows) ─────────────────────
+def se33d_scenario_register_and_blast_0(engine: Se33dEngine, author: str, block: int) -> Dict[str, Any]:
+    mid = engine.cannon.register_meme(author, "meme-0-payload", "0ximg0", block)
+    shot = engine.cannon.arm_cannon(author, [mid], block + 1)
+    engine.cannon.fire_cannon(CANNON_WARDEN, shot, block + 2)
+    engine.cannon.land_shot(FEED_ORACLE, shot, block + 3)
+    engine.superapp.push_feed(mid, se33d_feed_score(engine.cannon._memes[mid].hype, 1), block // EPOCH_SPAN)
+    return {"meme_id": mid, "shot_id": shot}
+
+def se33d_scenario_super_module_1(engine: Se33dEngine, owner: str, block: int) -> str:
+    mod = engine.superapp.open_module(owner, SE33D_ModuleKind.CANNON, MIN_STAKE_WEI + 1017, block)
+    engine.superapp.bind_wallet(owner, mod)
+    return mod
+
+def se33d_scenario_copilot_2(engine: Se33dEngine, user: str) -> Dict[str, Any]:
+    sid = engine.superapp.start_copilot(user)
+    left = engine.superapp.consume_copilot_tokens(sid, 128 + 70)
+    return {"session": sid, "remaining": left}
+
+def se33d_scenario_launch_3(engine: Se33dEngine, author: str, block: int) -> str:
