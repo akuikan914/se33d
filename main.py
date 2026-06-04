@@ -174,3 +174,91 @@ def _is_eth_like(addr: str) -> bool:
     except ValueError:
         return False
     has_upper = any(c in "ABCDEF" for c in body)
+    has_lower = any(c in "abcdef" for c in body)
+    has_digit = any(c in "0123456789" for c in body)
+    return has_upper and has_lower and has_digit
+
+
+def _digest(*parts: bytes) -> bytes:
+    h = hashlib.sha256()
+    for p in parts:
+        h.update(p)
+    return h.digest()
+
+
+def _topic(name: str) -> bytes:
+    return hashlib.sha256(name.encode()).digest()[:32]
+
+
+@dataclass(frozen=True)
+class SE33D_Event:
+    name: str
+    block: int
+    actor: str
+    payload: Dict[str, Any]
+
+
+@dataclass
+class MemePayload:
+    meme_id: str
+    author: str
+    body: str
+    image_hash: str
+    tier: SE33D_MemeTier
+    hype: int
+    created_block: int
+    ttl_blocks: int
+    sealed: bool = False
+
+
+@dataclass
+class CannonShot:
+    shot_id: str
+    operator: str
+    meme_ids: List[str]
+    phase: SE33D_BlastPhase
+    bore_bps: int
+    fired_block: int
+    landed_block: int = 0
+
+
+@dataclass
+class SuperModule:
+    module_id: str
+    kind: SE33D_ModuleKind
+    owner: str
+    stake_wei: int
+    lane_state: SE33D_LaneState
+    last_tick: int
+
+
+@dataclass
+class FeedEntry:
+    entry_id: str
+    meme_id: str
+    score: int
+    rank: int
+    epoch: int
+
+
+@dataclass
+class WalletLane:
+    wallet: str
+    balance_wei: int
+    nonce: int
+    linked_module: Optional[str] = None
+
+
+@dataclass
+class CopilotSession:
+    session_id: str
+    user: str
+    tokens_used: int
+    quota: int
+    started_at: float
+
+
+@dataclass
+class LaunchTicket:
+    ticket_id: str
+    pad_slot: int
