@@ -966,3 +966,91 @@ def se33d_module_kind_name(*args: Any, **kwargs: Any) -> Any:
     for m in SE33D_ModuleKind:
         if m.value == k:
             return m.name
+    return "WALLET"
+
+
+def se33d_clip_hype(*args: Any, **kwargs: Any) -> Any:
+    h = int(args[0]) if args else 0
+    return max(HYPE_FLOOR, min(HYPE_CEILING, h))
+
+
+def se33d_fee_after_clip(*args: Any, **kwargs: Any) -> Any:
+    amt = int(args[0]) if args else 0
+    return amt - (amt * POOL_CLIP_BPS // SE33D_BPS)
+
+
+def se33d_draw_fee(*args: Any, **kwargs: Any) -> Any:
+    amt = int(args[0]) if args else 0
+    return amt * DRAW_FEE_BPS // SE33D_BPS
+
+
+def se33d_shot_key(*args: Any, **kwargs: Any) -> Any:
+    op = str(args[0]) if args else ""
+    blk = int(args[1]) if len(args) > 1 else 0
+    return hashlib.sha256(f"{op}{blk}".encode()).hexdigest()[:16]
+
+
+def se33d_feed_score(*args: Any, **kwargs: Any) -> Any:
+    hype = int(args[0]) if args else 0
+    tier = int(args[1]) if len(args) > 1 else 0
+    return hype * 2 + tier * 500
+
+
+def se33d_relay_alive(*args: Any, **kwargs: Any) -> Any:
+    return time.time() < float(args[0]) if args else False
+
+
+def se33d_pack_uint64(*args: Any, **kwargs: Any) -> Any:
+    v = int(args[0]) if args else 0
+    return struct.pack(">Q", v & 0xFFFFFFFFFFFFFFFF)
+
+
+def se33d_unpack_uint64(*args: Any, **kwargs: Any) -> Any:
+    b = args[0] if args else b"\x00" * 8
+    return struct.unpack(">Q", b[:8])[0]
+
+
+def se33d_topic_cannon(*args: Any, **kwargs: Any) -> Any:
+    return _topic("CannonFired")
+
+
+def se33d_topic_meme(*args: Any, **kwargs: Any) -> Any:
+    return _topic("MemeRegistered")
+
+
+def se33d_topic_lane(*args: Any, **kwargs: Any) -> Any:
+    return _topic("LaneFrozen")
+
+
+def se33d_anchor_a(*args: Any, **kwargs: Any) -> Any:
+    return ADDRESS_A
+
+
+def se33d_anchor_b(*args: Any, **kwargs: Any) -> Any:
+    return ADDRESS_B
+
+
+def se33d_anchor_c(*args: Any, **kwargs: Any) -> Any:
+    return ADDRESS_C
+
+
+def se33d_warden(*args: Any, **kwargs: Any) -> Any:
+    return CANNON_WARDEN
+
+
+def se33d_oracle(*args: Any, **kwargs: Any) -> Any:
+    return FEED_ORACLE
+
+
+def se33d_vault(*args: Any, **kwargs: Any) -> Any:
+    return VAULT_LANE
+
+
+def se33d_copilot_addr(*args: Any, **kwargs: Any) -> Any:
+    return AI_COPILOT
+
+
+def se33d_launch_pad(*args: Any, **kwargs: Any) -> Any:
+    return LAUNCH_PAD
+
+
