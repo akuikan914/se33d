@@ -790,3 +790,91 @@ def se33d_seed_progress(rec: MemeSeedRecord, block: int) -> float:
 def se33d_vault_digest(seeds: Iterable[MemeSeedRecord]) -> bytes:
     parts: List[bytes] = []
     for s in sorted(seeds, key=lambda x: x.seed_id):
+        parts.append(s.seed_id.encode())
+        parts.append(str(s.stage.value).encode())
+    return _digest(*parts)
+
+
+def se33d_scenario_plant_germinate_harvest(
+    engine: Se33dEngine, author: str, block: int
+) -> Dict[str, Any]:
+    mid = engine.cannon.register_meme(author, "Se33d-sprout-payload", "0xS33d", block)
+    sid = engine.seed_vault.plant_seed(author, mid, block + 1)
+    engine.seed_vault.soak_seed(SEED_VAULT, sid, block + 2)
+    while engine.seed_vault._seeds[sid].stage.value < SE33D_GermStage.BLOOM.value:
+        engine.seed_vault.advance_germination(SEED_VAULT, sid, block + SEED_GERM_BLOCKS)
+    result = engine.seed_vault.harvest_seed(CANNON_WARDEN, sid, block + SEED_GERM_BLOCKS + 4)
+    epoch = block // EPOCH_SPAN
+    engine.superapp.push_feed(mid, se33d_feed_score(result["hype"], 2), epoch)
+    mirror = engine.relay.sync_epoch(FEED_ORACLE, epoch, block + SEED_GERM_BLOCKS + 5)
+    return {"meme_id": mid, "seed_id": sid, "harvest": result, "mirror_id": mirror}
+
+
+def se33d_scenario_cross_feed_chain(engine: Se33dEngine, block: int) -> List[str]:
+    mirrors: List[str] = []
+    base = block // EPOCH_SPAN
+    for off in range(3):
+        ep = base + off
+        if engine.superapp._feed:
+            try:
+                mirrors.append(engine.relay.sync_epoch(FEED_ORACLE, ep, block + off * CROSS_FEED_SYNC_INTERVAL + 50))
+            except SE33D_SyncConflict:
+                continue
+            except SE33D_CooldownActive:
+                engine.relay._last_sync_block = 0
+                mirrors.append(engine.relay.sync_epoch(FEED_ORACLE, ep, block + off * CROSS_FEED_SYNC_INTERVAL + 51))
+    return mirrors
+
+
+def se33d_scenario_seed_batch(engine: Se33dEngine, author: str, block: int, n: int) -> List[str]:
+    ids: List[str] = []
+    for i in range(n):
+        mid = engine.cannon.register_meme(author, f"Se33d-batch-{i}", f"0xB{i}", block + i)
+        ids.append(engine.seed_vault.plant_seed(author, mid, block + i + 1))
+    return ids
+
+
+def se33d_v2_status(engine: Se33dEngine) -> Dict[str, Any]:
+    base = engine.legacy_status()
+    base["seeds"] = engine.seed_vault.seed_count()
+    base["mirrors"] = engine.relay.mirror_count()
+    base["active_seeds"] = len(engine.seed_vault.active_seeds())
+    base["seed_vault"] = SEED_VAULT
+    return base
+
+
+SE33D_V2_ROUTES: Dict[str, Callable[..., Any]] = {
+    "plant_germinate_harvest": se33d_scenario_plant_germinate_harvest,
+    "cross_feed_chain": se33d_scenario_cross_feed_chain,
+}
+
+
+def se33d_dispatch_v2(route: str, engine: Se33dEngine, *args: Any, **kwargs: Any) -> Any:
+    fn = SE33D_V2_ROUTES.get(route)
+    if not fn:
+        raise SE33D_ModuleMissing(f"unknown v2 route {route}")
+    return fn(engine, *args, **kwargs)
+
+
+
+class Se33dEngine:
+    """Facade: meme cannon AI super-app — mainnet-safe off-chain orchestration."""
+
+    ANCHORS = (
+        ADDRESS_A,
+        ADDRESS_B,
+        ADDRESS_C,
+        CANNON_WARDEN,
+        FEED_ORACLE,
+        VAULT_LANE,
+        AI_COPILOT,
+        LAUNCH_PAD,
+        TREASURY_LANE,
+        MEME_REGISTRY,
+        RELAY_HUB,
+        SEED_VAULT,
+    )
+
+    def __init__(self, genesis_block: int = 0) -> None:
+        self.genesis_block = genesis_block
+        self.cannon = Se33dCannonCore(genesis_block)
