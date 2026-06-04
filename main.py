@@ -86,3 +86,91 @@ class SE33D_ModuleKind(IntEnum):
 
 
 class SE33D_MemeTier(IntEnum):
+    DRAFT = 0
+    WARM = 1
+    VIRAL = 2
+    LEGEND = 3
+
+
+class SE33D_LaneState(IntEnum):
+    OPEN = 0
+    THROTTLED = 1
+    FROZEN = 2
+    SETTLED = 3
+
+
+class SE33D_Error(Exception):
+    """Base Se33d fault."""
+
+
+class SE33D_NotWarden(SE33D_Error):
+    pass
+
+
+class SE33D_NotOracle(SE33D_Error):
+    pass
+
+
+class SE33D_LaneFrozen(SE33D_Error):
+    pass
+
+
+class SE33D_ZeroPayload(SE33D_Error):
+    pass
+
+
+class SE33D_MemeMissing(SE33D_Error):
+    pass
+
+
+class SE33D_MemeExists(SE33D_Error):
+    pass
+
+
+class SE33D_StakeTooLow(SE33D_Error):
+    pass
+
+
+class SE33D_QuotaBurst(SE33D_Error):
+    pass
+
+
+class SE33D_CooldownActive(SE33D_Error):
+    pass
+
+
+class SE33D_BatchOverflow(SE33D_Error):
+    pass
+
+
+class SE33D_ViralityBreach(SE33D_Error):
+    pass
+
+
+class SE33D_ModuleMissing(SE33D_Error):
+    pass
+
+
+class SE33D_ModuleFull(SE33D_Error):
+    pass
+
+
+class SE33D_RelayTimeout(SE33D_Error):
+    pass
+
+
+class SE33D_InvalidAddress(SE33D_Error):
+    pass
+
+
+def _is_eth_like(addr: str) -> bool:
+    if not addr or len(addr) != 42 or not addr.startswith("0x"):
+        return False
+    body = addr[2:]
+    if len(body) != 40:
+        return False
+    try:
+        int(body, 16)
+    except ValueError:
+        return False
+    has_upper = any(c in "ABCDEF" for c in body)
